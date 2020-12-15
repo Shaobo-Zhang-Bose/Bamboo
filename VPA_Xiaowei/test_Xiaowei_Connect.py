@@ -107,6 +107,41 @@ def test_Xiaowei_Disconnect_Cycle_01(automation_xiaowei_connect):
 
 @ScriptCommon()
 @TestFilters(scope=1, phones=[[PhoneType.ANY]])
+def test_Xiaowei_Disconnect_Cycle_While_Music_Is_Streaming_01(automation_xiaowei_connect):
+    dut = automation_xiaowei_connect[0]
+    phone = automation_xiaowei_connect[1]
+    assert phone.xiaowei.verify_device_icon(), "Xiaowei connection fail"
+    test_step(1, "Launch QQ music", dut)
+    assert phone.launch_application(PhoneAppType.QQMUSIC), "Failed to launch QQ music"
+    test_step(2, "Play a music in QQ music", dut)
+    assert phone.qqmusic.play_music(), "Failed to play music"
+    assert dut.status.get_sink_state() == SinkStates.A2DP_STREAMING, "The music was not played"
+    test_step(3, "Launch xiaowei", dut)
+    assert phone.launch_application(PhoneAppType.XIAOWEI), "Failed to switch to Xiaowei"
+
+    cycle = 20
+    for i in range(cycle):
+        logger.info("Test disconnect xiaowei and reopen for %d times, %d" % (cycle, i + 1))
+        assert dut.status.get_sink_state() == SinkStates.A2DP_STREAMING, "The music was not played"
+        test_step(4, "Disconnect dut", dut)
+        assert phone.xiaowei.disconnect_device(), "Failed to disconnect dut"
+        test_step(5, "Close xiaowei APP", dut)
+        assert phone.xiaowei.close_app(), "Failed to close xiaowei"
+        test_step(6, "Re-open xiaowei APP", dut)
+        assert phone.xiaowei.launch_app(), "Failed to re-open Xiaowei"
+        test_step(7, "Verify prompt and accept it", dut)
+        assert phone.xiaowei.verify_connection_prompt(), "Failed to verify connection prompt"
+        assert phone.xiaowei.accept_connection_prompt(), "Failed to accept connection prompt"
+        test_step(8, "Verify if xiaowei connect to dut", dut)
+        assert phone.xiaowei.verify_device_icon(), "Failed to connect with dut"
+
+    test_step(9, "Close QQ music", dut)
+    assert phone.qqmusic.terminate_app(), "Failed to close QQ music"
+    wait(20)
+    assert dut.status.get_sink_state() == SinkStates.CONNECTED, "Failed to close QQ music"
+
+@ScriptCommon()
+@TestFilters(scope=1, phones=[[PhoneType.ANY]])
 def test_Xiaowei_Dut_Power_Cycle_01(automation_xiaowei_connect):
     dut = automation_xiaowei_connect[0]
     phone = automation_xiaowei_connect[1]
@@ -211,3 +246,4 @@ def test_Xiaowei_VPA_Button_Stress_01(automation_xiaowei_connect):
     test_step(3, "Verify that the text of this query and response in xiaowei APP is correct or not", dut)
     assert phone.xiaowei.verify_query_response_text(query_text, response_text), "xiaowei query or response failed"
     phone.xiaowei.swip_down(n=8)
+

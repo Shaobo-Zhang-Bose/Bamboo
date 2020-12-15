@@ -513,6 +513,7 @@ class XiaoweiScenario(BasePage):
             return False
         else:
             logger.info('Xiaowei has been brought to foreground successfully')
+            wait(5)
             return True
 
     def terminate_app(self):

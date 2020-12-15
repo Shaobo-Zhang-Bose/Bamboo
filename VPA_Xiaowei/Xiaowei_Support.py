@@ -28,7 +28,7 @@ import requests
 import time
 import base64
 from pyaudio import PyAudio, paInt16
-from threading import Thread, Event
+from threading import Thread, Event, Condition
 from datetime import datetime
 
 from wham_automation.lib.framework.Configs.FrameworkConstants import PhoneType
@@ -61,11 +61,14 @@ class XiaoweiSupport:
             "重阳节的习俗": "重阳节.*农历九月初九.*",
             "清明节的习俗": "清明节.*传统.*"
         }
-
+        long_query_dict = {
+            "江碧鸟逾白山青花欲燃今春看又过何日是归年": ".*绝句二首.*"
+        }                   
         query_response_dict = dict()
         query_response_dict["query_weekday"] = weekday_dict
         query_response_dict["query_weather"] = weather_dict
         query_response_dict["query_festival"] = festival_dict
+        query_response_dict["long_query"] = long_query_dict                                                          
         return query_response_dict
 
     @classmethod
@@ -87,17 +90,67 @@ class XiaoweiSupport:
         control_story_or_music["control_dict"] = control_playing_dict
         return control_story_or_music
 
+    @classmethod
+    def xw_in_translation_mode(cls):
+        translation_mode_dict = {
+            "goto_translation_mode": {"进入翻译模式": "已进入翻译，请说出需要翻译的内容，如需退出，请说退出翻译"},
+            "quit_translation_mode": {"退出翻译": "已退出翻译"},
+            "translation_sentence": {"请为我翻译这句话": "Please translate this sentence for me."}
+        }
+        return translation_mode_dict                
     verify_vpa_status = None
 
     @classmethod
-    def test_vpa(cls, dut, query_words, button=Buttons.VPA, hold_seconds=5, how_many_times=1):
+    def test_vpa(cls, dut, query_words, button=Buttons.VPA, hold_seconds=5, how_many_times=1, phone=None,
+                 turn_off_network=False, turn_off_bluetooth=False, close_xiaowei=False):
         wait(3)
         press_vpa_button = VPAProcess(dut, button, hold_seconds, how_many_times)
-        press_vpa_button.start()
-        play_vpa_voice = GenerateVoiceToQuery(query_words)
-        play_vpa_voice.play_query_voice()
+        if phone and turn_off_network:
+            if not phone.launch_application(PhoneAppType.SETTINGS):
+                return False
+            if not phone.settings.cellular_off():
+                return False
+            phone_setting = PhoneSetting(phone, setting="network")
+            phone_setting.start()
+            wait(5, "network will be turned off")
+            press_vpa_button.start()
+            play_vpa_voice = GenerateVoiceToQuery(query_words)
+            play_vpa_voice.play_query_voice()
+            phone_setting.join()
+            if not phone_setting.get_result():
+                return False
+
+        elif phone and turn_off_bluetooth:
+            if not phone.launch_application(PhoneAppType.SETTINGS):
+                return False
+            phone_setting = PhoneSetting(phone, setting="bluetooth")
+            phone_setting.start()
+            wait(8, "bluetooth will be turned off")
+            press_vpa_button.start()
+            play_vpa_voice = GenerateVoiceToQuery(query_words)
+            play_vpa_voice.play_query_voice()
+            phone_setting.join()
+            if not phone_setting.get_result():
+                return False
+
+        elif phone and close_xiaowei:
+            press_vpa_button.start()
+            play_vpa_voice = GenerateVoiceToQuery(query_words)
+            play_vpa_voice.play_query_voice()
+            wait(2)
+            if not phone.xiaowei.terminate_app():
+                return False
+            # if not phone.xiaowei.close_app():
+            #     return False
+
+        else:
+            press_vpa_button.start()
+            play_vpa_voice = GenerateVoiceToQuery(query_words)
+            play_vpa_voice.play_query_voice()
+
         press_vpa_button.join()
-        cls.verify_vpa_status = VerifyVPAStatus(dut)
+        cls.verify_vpa_status = VerifyVPAStatus(dut, phone)
+        return True
 
     @classmethod
     def test_swipe_forward_back(cls, forward=False, back=False):
@@ -130,6 +183,11 @@ class XiaoweiSupport:
         return test_result
 
     @classmethod
+    def test_a2dp_source(cls):
+        test_result = cls.verify_vpa_status.verify_dut_sink_state_and_check_a2dp_source()
+        return test_result
+
+    @classmethod                                        
     def test_xiaowei_vpa(cls):
         test_result = cls.verify_vpa_status.verify_dut_sink_state()
         return test_result
@@ -140,6 +198,11 @@ class XiaoweiSupport:
         return test_result
 
     @classmethod
+    def get_current_dut_sink_state(cls):
+        test_result = cls.verify_vpa_status.get_dut_sink_state()
+        return test_result
+
+    @classmethod      
     def test_query_no_response(cls):
         return True
 
@@ -246,6 +309,38 @@ class GenerateVoiceToQuery:
         self.engine.disconnect({"topic": 'started-utterance', "cb": self.start_voice_query})
         self.engine.disconnect({"topic": 'finished-utterance', "cb": self.finish_voice_query})
 
+class PhoneSetting(Thread):
+    def __init__(self, phone, setting):
+        Thread.__init__(self)
+        self.phone = phone
+        self.setting = setting
+
+    def run(self):
+        self.perform_setting_result = self.perform_setting()
+
+    def perform_setting(self):
+        if self.setting == "network":
+            if not self.phone.launch_application(PhoneAppType.SETTINGS):
+                return False
+            if not self.phone.settings.wifi_off():
+                return False
+            if not self.phone.settings.terminate_app():
+                return False
+        elif self.setting == "bluetooth":
+            if not self.phone.launch_application(PhoneAppType.BLUETOOTH):
+                return False
+            if not self.phone.bluetooth.bt_radio(enable='off'):
+                return False
+            if not self.phone.settings.terminate_app():
+                return False
+        else:
+            pass
+
+        return True
+
+    def get_result(self):
+        return self.perform_setting_result
+
 class SwipeCapTouchForwardBack(Thread):
     def __init__(self, dut, forward, back):
         Thread.__init__(self)
@@ -350,11 +445,39 @@ class DoubleTapCapTouch(Thread):
                     wait(5)
             return False
         else:
-            return False
+            if not self.dut.status.get_sink_state() == SinkStates.A2DP_STREAMING:
+                return False
+            self.dut.captouch.captouch_double_tap()
+            wait(5)
+            if self.dut.status.get_sink_state() == SinkStates.CONNECTED:
+                return True
+            else:
+                return False
 
     def get_result(self):
         return self.perform_double_tap_result
 
+class CheckA2DPSource(Thread):
+    def __init__(self, dut, phone):
+        Thread.__init__(self)
+        self.dut = dut
+        self.phone = phone
+
+    def run(self):
+        self.check_result = self.check_qq_music_pause_state()
+
+    def check_qq_music_pause_state(self):
+        wait(1)
+        active_app = self.phone.qqmusic.activate_app()
+        click_no_reminder_button = self.phone.qqmusic.no_reminder_for_music_interruption()
+        pause_music = self.phone.qqmusic.pause_music()
+        if active_app and click_no_reminder_button and pause_music:
+            if self.dut.status.get_sink_state() == SinkStates.A2DP_STREAMING:
+                logger.info("QQ music has been paused, streaming is come from VPA response")
+                return True
+
+    def get_result(self):
+        return self.check_result                              
 class VPAProcess(Thread):
     def __init__(self, dut, button, hold_seconds, how_many_times):
         Thread.__init__(self)
@@ -370,8 +493,9 @@ class VPAProcess(Thread):
         self.dut.manager.vpa_tap_hold(hold_seconds=self.hold_seconds, how_many_times=self.how_many_times)
 
 class VerifyVPAStatus:
-    def __init__(self, dut):
+    def __init__(self, dut, phone):
         self.dut = dut
+        self.phone = phone                  
 
     def verify_dut_sink_state_while_previous_response_was_interrupted(self):
         for i in range(10):
@@ -401,6 +525,11 @@ class VerifyVPAStatus:
         perform_double_tap_gesture.join()
         return perform_double_tap_gesture.get_result()
 
+    def verify_qqmusic_pause_while_vpa_response_streaming(self, pause_stream, resume_streaming):
+        perform_double_tap_gesture = DoubleTapCapTouch(self.dut, pause_stream, resume_streaming)
+        perform_double_tap_gesture.start()
+        perform_double_tap_gesture.join()
+        return perform_double_tap_gesture.get_result()                                                                                                
     def verify_dut_sink_state_while_dut_in_discoverable_state(self):
         for i in range(10):
             if self.dut.status.get_sink_state() == SinkStates.DISCOVERABLE:
@@ -411,26 +540,39 @@ class VerifyVPAStatus:
 
     def verify_dut_sink_state_while_dut_is_playing_music(self):
         wait(10)
-        for i in range(10):
-            if not self.dut.status.get_sink_state() == SinkStates.A2DP_STREAMING:
-                return False
-            else:
-                wait(1)
-        return True
+        if self.dut.status.get_sink_state() == SinkStates.A2DP_STREAMING:
+            return True
 
-    def verify_dut_sink_state_while_perform_native_vap(self):
-        wait(10)
-        for i in range(10):
-            if not self.dut.status.get_sink_state() == SinkStates.A2DP_STREAMING:
-                return False
+        else:
+            return False
+
+    def verify_dut_sink_state_and_check_a2dp_source(self):
+        wait(5)
+        check_a2dp_source = CheckA2DPSource(self.dut, self.phone)
+        check_a2dp_source.start()
+        check_a2dp_source.join()
+        test_result = check_a2dp_source.get_result()
+        if test_result:
+            resume_music = self.phone.qqmusic.music_resuming_after_interruption()
+            if resume_music:
+                if self.get_dut_sink_state() == SinkStates.A2DP_STREAMING:
+                    return True
+                else:
+                    return False
             else:
-                wait(1)
-        return True
+                return False
+        else:
+            return test_result
+
+    def get_dut_sink_state(self):
+        wait(5)
+        return self.dut.status.get_sink_state()
 
     def verify_dut_sink_state(self, test_native_vpa=False):
         count = 0
         ss_a2dp_streaming = False
         ss_active_call_sco = False
+        ss_no_call_sco = False                      
         ss_connected = False
 
         while count < 10:
@@ -444,14 +586,14 @@ class VerifyVPAStatus:
                 logger.info("waiting for response to play")
                 ss_active_call_sco = True
                 break
-            elif self.dut.status.get_sink_state() == 25:
+            elif self.dut.status.get_sink_state() == SinkStates.DEVICE_NO_CALL_SCO:
                 logger.info("waiting for response to play")
-                ss_active_call_sco = True
+                ss_no_call_sco = True
                 break
             else:
                 wait(1)
                 count += 1
-        if not (ss_a2dp_streaming or ss_active_call_sco):
+        if not (ss_a2dp_streaming or ss_active_call_sco or ss_no_call_sco):
             return False
         else:
             # If sink state of dut has not changed to CONNECTED within 250s after playing a2dp stream, the test fail

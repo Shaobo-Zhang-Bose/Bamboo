@@ -36,6 +36,11 @@ Matching_Table_of_Numbers_and_Chinese_Characters = {
     0: "零", 1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六", 7: "七", 8: "八",  9: "九", 10: "十"
 }
 
+Matching_Table_of_Correct_Words_and_Wrong_Words = {
+    "中音": ["中英", "终因", "中医", "声音", "重音"],
+    "级": ["集"]
+}
+
 ################################################## Query Base for NC ###################################################
 
 current_nc_level = [
@@ -53,15 +58,11 @@ decrease_nc_level = [
     "降噪减", "降噪减少", "降噪减弱", "降低降噪", "减少降噪", "调低降噪", "减弱降噪",
     "消噪减", "消噪减少", "消噪减弱", "降低消噪", "减少消噪", "调低消噪", "减弱消噪"
 ]
-set_nc_to_random_level = [
-    ["降噪#", random.randint(0, 10)], ["降噪至#", random.randint(0, 10)], ["降噪调至#", random.randint(0, 10)],
-    ["降噪调到#", random.randint(0, 10)], ["降噪等级#", random.randint(0, 10)], ["#级降噪", random.randint(0, 10)],
-    ["设为#级降噪", random.randint(0, 10)], ["把降噪调至#", random.randint(0, 10)], ["把降噪调到#", random.randint(0, 10)],
-    ["消噪#", random.randint(0, 10)], ["消噪至#", random.randint(0, 10)], ["消噪调至#", random.randint(0, 10)],
-    ["消噪调到#", random.randint(0, 10)], ["消噪等级#", random.randint(0, 10)], ["#级消噪", random.randint(0, 10)],
-    ["设为#级消噪", random.randint(0, 10)], ["把消噪调至#", random.randint(0, 10)], ["把消噪调到#", random.randint(0, 10)]
+
+set_nc_to_specific_level = [
+    "降噪#", "降噪至#", "降噪调至#", "降噪调到#", "降噪等级#", "#级降噪", "设为#级降噪", "把降噪调至#", "把降噪调到#",
+    "消噪#", "消噪至#", "消噪调至#", "消噪调到#", "消噪等级#", "#级消噪", "设为#级消噪", "把消噪调至#", "把消噪调到#",
 ]
-set_nc_to_specific_level = map(lambda x: [x[0].replace("#", Matching_Table_of_Numbers_and_Chinese_Characters[x[1]]), x[1]], set_nc_to_random_level)
 
 set_nc_level_to_max = [
     "降噪最高", "降噪最大", "降噪调到最高", "降噪调到最大",
@@ -177,35 +178,18 @@ set_bass_level_to_default = [
     "低音调至默认值", "低音调为默认值", "低音设为默认值", "重置低音等级", "低音设为零", "低音清零", "清空低音等级"
 ]
 
-set_treble_to_random_level = [
-    ["高音设置为#", random.randint(-10, 10)], ["高音设为#", random.randint(-10, 10)], ["高音调至#", random.randint(-10, 10)],
-    ["高音调为#", random.randint(-10, 10)], ["高音#", random.randint(-10, 10)], ["高音#级", random.randint(-10, 10)],
-    ["#级高音", random.randint(-10, 10)]
-]
-set_treble_to_specific_level = map(lambda x: [x[0].replace("#", Matching_Table_of_Numbers_and_Chinese_Characters[x[1]]), x[1]], set_treble_to_random_level)
+set_treble_to_specific_level = ["高音设置为#", "高音设为#", "高音调至#", "高音调为#", "高音#", "高音#级", "#级高音"]
 
-set_mid_to_random_level = [
-    ["中音设置为#", random.randint(-10, 10)], ["中音设为#", random.randint(-10, 10)], ["中音调至#", random.randint(-10, 10)],
-    ["中音调为#", random.randint(-10, 10)], ["中音#", random.randint(-10, 10)], ["中音#级", random.randint(-10, 10)],
-    ["#级中音", random.randint(-10, 10)]
-]
-set_mid_to_specific_level = map(lambda x: [x[0].replace("#", Matching_Table_of_Numbers_and_Chinese_Characters[x[1]]), x[1]], set_mid_to_random_level)
+set_mid_to_specific_level = ["中音设置为#", "中音设为#", "中音调至#", "中音调为#", "中音#", "中音#级", "#级中音"]
 
-set_bass_to_random_level = [
-    ["低音设置为#", random.randint(-10, 10)], ["低音设为#", random.randint(-10, 10)], ["低音调至#", random.randint(-10, 10)],
-    ["低音调为#", random.randint(-10, 10)], ["低音#", random.randint(-10, 10)], ["低音#级", random.randint(-10, 10)],
-    ["#级低音", random.randint(-10, 10)]
-]
-set_bass_to_specific_level = map(lambda x: [x[0].replace("#", Matching_Table_of_Numbers_and_Chinese_Characters[x[1]]), x[1]], set_bass_to_random_level)
+set_bass_to_specific_level = ["低音设置为#", "低音设为#", "低音调至#", "低音调为#", "低音#", "低音#级","#级低音"]
 
-set_multiple_eqs_to_random_level = [
-    ["高音#中音#", random.randint(-10, 10), ["treble", "mid"]],
-    ["高音#低音#", random.randint(-10, 10), ["treble", "bass"]],
-    ["中音#低音#", random.randint(-10, 10), ["mid", "bass"]],
-    ["高音#中音#低音#", random.randint(-10, 10), ["treble", "mid", "bass"]]
+set_multiple_eqs_to_specific_level = [
+    ["高音#中音#", ["treble", "mid"]], ["高音#低音#", ["treble", "bass"]],
+    ["中音#低音#", ["mid", "bass"]], ["高音#中音#低音#", ["treble", "mid", "bass"]]
 ]
-set_multiple_eqs_to_specific_level = map(lambda x: [x[0].replace("#", Matching_Table_of_Numbers_and_Chinese_Characters[x[1]]), x[1], x[2]], set_multiple_eqs_to_random_level)
 
+########################################################################################################################
 class Xiaowei_NC_Support:
     def __init__(self, dut, phone, source_nc, target_nc, query_nc_text, test_type):
         self.dut = dut
@@ -217,8 +201,8 @@ class Xiaowei_NC_Support:
 
     @property
     def get_nc_level(self):
-        wait(3)
-        self.current_nc_level = int(self.dut.status.get_cnc_level())
+        wait(1)
+        self.current_nc_level = 10 - int(self.dut.status.get_cnc_level())
         return self.current_nc_level
 
     @property
@@ -226,11 +210,11 @@ class Xiaowei_NC_Support:
         return self.target_nc == self.get_nc_level
 
     def adjust_nc_level(self):
-        self.dut.device.set_cnc_level(self.source_nc)
+        self.dut.device.set_cnc_level(10 - self.source_nc)
 
     @property
     def get_nc_state(self):
-        wait(3)
+        wait(1)
         self.current_nc_state = int(self.dut.status.get_cnc_state())
         return self.current_nc_state
 
@@ -253,15 +237,15 @@ class Xiaowei_NC_Support:
         return XiaoweiSupport.test_query_no_response()
 
     def get_query_nc_text_in_xw(self):
-        return self.phone.xiaowei.verify_query_nc_eq_text(self.query_nc_text)
+        return self.phone.xiaowei.verify_query_no_response_text(self.query_nc_text)
 
     def check_result(self):
         query_text_in_xw = self.get_query_nc_text_in_xw()
         if self.test_type == "nc_level":
             if self.check_nc_level and query_text_in_xw == self.query_nc_text:
-                return [self.query_nc_text, query_text_in_xw, str(10 - self.source_nc), str(10 - self.current_nc_level), "PASS"]
+                return [self.query_nc_text, query_text_in_xw, str(self.source_nc), str(self.current_nc_level), "PASS"]
             else:
-                return [self.query_nc_text, query_text_in_xw, str(10 - self.source_nc), str(10 - self.current_nc_level), "FAIL"]
+                return [self.query_nc_text, query_text_in_xw, str(self.source_nc), str(self.current_nc_level), "FAIL"]
         else:
             if self.check_nc_state and query_text_in_xw == self.query_nc_text:
                 return [self.query_nc_text, query_text_in_xw, str(self.source_nc_state), str(self.current_nc_state), "PASS"]
@@ -287,7 +271,7 @@ class Xiaowei_EQ_Support:
         self.current_eq_level = self.get_eq_level
 
         if len(self.eq_types) == 1:
-            self.eq = self.eq_types[0]
+            # self.eq = self.eq_types[0]
             if self.eq_types[0] == "treble":
                 self.current_treble_level = self.current_eq_level[2]
                 self.current_eq_level = str(self.current_treble_level)
@@ -302,7 +286,7 @@ class Xiaowei_EQ_Support:
                 return self.target_eq_level == self.current_bass_level
 
         if len(self.eq_types) == 2:
-            self.eq = self.eq_types[0] + "," + self.eq_types[1]
+            # self.eq = self.eq_types[0] + "," + self.eq_types[1]
             if self.eq_types[0] == "treble" and self.eq_types[1] == "mid":
                 self.current_treble_level = self.current_eq_level[2]
                 self.current_mid_level = self.current_eq_level[1]
@@ -320,7 +304,7 @@ class Xiaowei_EQ_Support:
                 return self.target_eq_level == self.current_mid_level and self.target_eq_level == self.current_bass_level
 
         if len(self.eq_types) == 3:
-            self.eq = self.eq_types[0] + "," + self.eq_types[1] + "," + self.eq_types[2]
+            # self.eq = self.eq_types[0] + "," + self.eq_types[1] + "," + self.eq_types[2]
             if self.eq_types[0] == "treble" and self.eq_types[1] == "mid" and self.eq_types[2] == "bass":
                 self.current_treble_level = self.current_eq_level[2]
                 self.current_mid_level = self.current_eq_level[1]
@@ -360,15 +344,24 @@ class Xiaowei_EQ_Support:
         return XiaoweiSupport.test_query_no_response()
 
     def get_query_eq_text_in_xw(self):
-        return self.phone.xiaowei.verify_query_nc_eq_text(self.query_eq_text)
+        return self.phone.xiaowei.verify_query_no_response_text(self.query_eq_text)
 
     def check_result(self):
         query_text_in_xw = self.get_query_eq_text_in_xw()
         if query_text_in_xw == self.query_eq_text:
             check_text = True
         else:
-            if query_text_in_xw.find("中英") >= 0:
-                check_text = query_text_in_xw.replace("中英", "中音") == self.query_eq_text
+            correct_words_list = list(Matching_Table_of_Correct_Words_and_Wrong_Words)
+            for correct_word in correct_words_list:
+                if self.query_eq_text.find(correct_word) >= 0:
+                    find_it = False
+                    for wrong_word in Matching_Table_of_Correct_Words_and_Wrong_Words[correct_word]:
+                        if query_text_in_xw.find(wrong_word) >= 0:
+                            find_it = True
+                            check_text = query_text_in_xw.replace(wrong_word, correct_word) == self.query_eq_text
+                            break
+                    if find_it:
+                        break
             else:
                 check_text = False
 
