@@ -35,6 +35,7 @@ from wham_automation.utils.log import logger
 from wham_automation.test_scripts.Bamboo.VPA_Xiaowei.Xiaowei_Support import XiaoweiSupport, VPAProcess, GenerateVoiceToQuery
 import random
 import time
+from retrying import retry
 
 @pytest.fixture(scope='function')
 def automation_xiaowei_connect(dut_precondition_connected_activated_in_xiaowei):
@@ -195,6 +196,15 @@ def test_Xiaowei_Hibernation_Cycle_01(automation_xiaowei_connect):
     query_text = random.choice(list(query_response_dict["query_weekday"]))
     response_text = query_response_dict["query_weekday"][query_text]
     assert phone.xiaowei.verify_device_icon(), "Xiaowei connection fail"
+
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
+    def test_xiaowei_query(stepnum1, stepnum2):
+        test_step(stepnum1, "Test xiaowei voice query the query_weather", dut)
+        XiaoweiSupport.test_vpa(dut, query_text)
+        assert XiaoweiSupport.test_xiaowei_vpa(), "xiaowei recording or streaming failed"
+        test_step(stepnum2, "Verify that the text of this query and response in xiaowei APP is correct or not", dut)
+        assert phone.xiaowei.verify_query_response_text(query_text, response_text), "xiaowei query or response failed"
+
     test_step(1, "Set dut auto off", dut)
     assert dut.device.enable_auto_off() == '5', "Fail to set auto off timer as 5"
     base_t = time.time()
@@ -215,11 +225,7 @@ def test_Xiaowei_Hibernation_Cycle_01(automation_xiaowei_connect):
         if not phone.bluetooth.bt_is_connected_to(current_name):
             assert phone.bluetooth.connect_paired_device(current_name), "Failed to dut via bluetooth"
         assert phone.launch_application(PhoneAppType.XIAOWEI), "Failed to switch to Xiaowei"
-        test_step(5, "Test xiaowei voice query the query_weather", dut)
-        XiaoweiSupport.test_vpa(dut, query_text)
-        assert XiaoweiSupport.test_xiaowei_vpa(), "xiaowei recording or streaming failed"
-        test_step(6, "Verify that the text of this query and response in xiaowei APP is correct or not", dut)
-        assert phone.xiaowei.verify_query_response_text(query_text, response_text), "xiaowei query or response failed"
+        test_xiaowei_query(5, 6)
         current_t = time.time()
     phone.xiaowei.swip_down(n=8)
 
