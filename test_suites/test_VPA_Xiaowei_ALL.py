@@ -33,10 +33,10 @@ from wham_automation.script_support.ScriptFixtures import dut_precondition_power
 from wham_automation.script_support.Reorder import reorder_tests, FeatureStartingOrder
 
 # Then import all the test functions
-from wham_automation.test_scripts.VPA.VPA_Xiaowei.test_Xiaowei_Connect import *
-from wham_automation.test_scripts.VPA.VPA_Xiaowei.test_Xiaowei_UX import *
-from wham_automation.test_scripts.VPA.VPA_Xiaowei.test_Xiaowei_BMAP import *
-from wham_automation.test_scripts.VPA.VPA_Xiaowei.test_Xiaowei_NC_EQ import *
+from wham_automation.test_scripts.Bamboo.VPA_Xiaowei.test_Xiaowei_Connect import *
+from wham_automation.test_scripts.Bamboo.VPA_Xiaowei.test_Xiaowei_UX import *
+from wham_automation.test_scripts.Bamboo.VPA_Xiaowei.test_Xiaowei_BMAP import *
+from wham_automation.test_scripts.Bamboo.VPA_Xiaowei.test_Xiaowei_NC_EQ import *
 
 reorder_tests(
     FeatureStartingOrder.VPA_XIAOWEI,
