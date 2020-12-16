@@ -140,8 +140,6 @@ class XiaoweiSupport:
             wait(2)
             if not phone.xiaowei.terminate_app():
                 return False
-            # if not phone.xiaowei.close_app():
-            #     return False
 
         else:
             press_vpa_button.start()
@@ -299,7 +297,7 @@ class GenerateVoiceToQuery:
         if sys.platform == 'darwin':
             self.engine.setProperty("voice",
                                     r"com.apple.speech.synthesis.voice.ting-ting")
-        wait(2)
+        wait(1)
         self.engine.connect('started-utterance', self.start_voice_query)
         self.engine.connect('finished-utterance', self.finish_voice_query)
         self.engine.say(self.query_words, "xiaowei vpa query")
@@ -477,7 +475,8 @@ class CheckA2DPSource(Thread):
                 return True
 
     def get_result(self):
-        return self.check_result                              
+        return self.check_result
+
 class VPAProcess(Thread):
     def __init__(self, dut, button, hold_seconds, how_many_times):
         Thread.__init__(self)
@@ -529,7 +528,8 @@ class VerifyVPAStatus:
         perform_double_tap_gesture = DoubleTapCapTouch(self.dut, pause_stream, resume_streaming)
         perform_double_tap_gesture.start()
         perform_double_tap_gesture.join()
-        return perform_double_tap_gesture.get_result()                                                                                                
+        return perform_double_tap_gesture.get_result()
+
     def verify_dut_sink_state_while_dut_in_discoverable_state(self):
         for i in range(10):
             if self.dut.status.get_sink_state() == SinkStates.DISCOVERABLE:

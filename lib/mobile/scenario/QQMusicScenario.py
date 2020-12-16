@@ -47,10 +47,12 @@ class QQMusicScenario(BasePage):
         if self.phone_info.phone_type == PhoneType.IOS:
             self.package_name = 'com.tencent.QQMusic'
             self.activity_name = 'com.tencent.QQMusic'
-            self.play_music_label = '//XCUIElementTypeButton[@name="播放"]'
-            self.pause_music_label = '//XCUIElementTypeButton[@name="暂停"]'
             self.music_interruption_no_reminder_button = '//XCUIElementTypeButton[@name="不再提醒"]'
             self.close_membership_application_button = '//XCUIElementTypeButton[@name=="关闭"]'
+
+            self.play_or_pause_music_button = '//XCUIElementTypeApplication[1]/XCUIElementTypeWindow[1]/XCUIElementTypeOther[1] \
+                /XCUIElementTypeOther[1]/XCUIElementTypeOther[1]/XCUIElementTypeOther[2]/XCUIElementTypeOther[1] \
+                /XCUIElementTypeOther[1]/XCUIElementTypeOther[1]/XCUIElementTypeOther[3]/XCUIElementTypeButton[1]'
 
     def launch_qqmusic_app(self, driver=None):
         """
@@ -95,8 +97,8 @@ class QQMusicScenario(BasePage):
     def play_music(self, wait_time=5):
         if not self.close_pop_window():
             return False
-        else:
-            logger.info('start to play music')
+        logger.info('start to play music')
+        if self.phone_info.phone_type == PhoneType.ANDROID:
             for i in range(10):
                 try:
                     WebDriverWait(self.driver.appium_driver, wait_time, 1).until(
@@ -114,41 +116,105 @@ class QQMusicScenario(BasePage):
                     return True
             else:
                 return False
+        else:
+            logger.info('start to play music')
+            for i in range(10):
+                try:
+                    ele_obj = self.driver.appium_driver.find_element_by_xpath(self.play_or_pause_music_button)
+                    if ele_obj.text == "暂停":
+                        return True
+                    elif ele_obj.text == "播放":
+                        result = self._verify_and_click_element(self.play_or_pause_music_button)
+                        if result:
+                            wait(1)
+                            ele_obj = self.driver.appium_driver.find_element_by_xpath(self.play_or_pause_music_button)
+                            if ele_obj.text == "暂停":
+                                logger.info('Succeed to play music')
+                                wait(3)
+                                return True
+                        else:
+                            logger.info('Fail to play music, try again')
+                            wait(1)
+                    else:
+                        wait(1)
+                except Exception as e:
+                    wait(1)
+            else:
+                return False
 
     def music_resuming_after_interruption(self, wait_time=5):
         logger.info('start to resume music')
-        for i in range(30):
-            try:
-                WebDriverWait(self.driver.appium_driver, wait_time, 1).until(
-                    lambda x: x.find_element_by_xpath(self.pause_music_label))
-            except Exception as e:
-                logger.info('Music was not resumed, try again')
-                wait(1)
+        if self.phone_info.phone_type == PhoneType.ANDROID:
+            for i in range(30):
+                try:
+                    WebDriverWait(self.driver.appium_driver, wait_time, 1).until(
+                        lambda x: x.find_element_by_xpath(self.pause_music_label))
+                except Exception as e:
+                    logger.info('Music was not resumed, try again')
+                    wait(1)
+                else:
+                    logger.info('Music has been resumed')
+                    return True
             else:
-                logger.info('Music has been resumed')
-                return True
+                return False
+
         else:
-            return False
+            for i in range(30):
+                try:
+                    ele_obj = self.driver.appium_driver.find_element_by_xpath(self.play_or_pause_music_button)
+                    if ele_obj.text == "暂停":
+                        logger.info('Music has been resumed')
+                        return True
+                except Exception as e:
+                    logger.info('Music was not resumed, try again')
+                    wait(1)
+            else:
+                return False
 
     def pause_music(self, wait_time=5):
         logger.info('start to pause music')
-        for i in range(10):
-            try:
-                WebDriverWait(self.driver.appium_driver, wait_time, 1).until(
-                    lambda x: x.find_element_by_xpath(self.play_music_label))
-            except Exception as e:
-                result = self._verify_and_click_element(self.pause_music_label)
-                if result:
-                    logger.info('Succeed to pause music')
-                    wait(1)
+        if self.phone_info.phone_type == PhoneType.ANDROID:
+            for i in range(10):
+                try:
+                    WebDriverWait(self.driver.appium_driver, wait_time, 1).until(
+                        lambda x: x.find_element_by_xpath(self.play_music_label))
+                except Exception as e:
+                    result = self._verify_and_click_element(self.pause_music_label)
+                    if result:
+                        logger.info('Succeed to pause music')
+                        wait(1)
+                    else:
+                        logger.info('Fail to pause music, try again')
+                        wait(1)
                 else:
-                    logger.info('Fail to pause music, try again')
+                    logger.info('Music has been paused')
+                    return True
+            else:
+                return False
+        else:
+            for i in range(10):
+                try:
+                    ele_obj = self.driver.appium_driver.find_element_by_xpath(self.play_or_pause_music_button)
+                    if ele_obj.text == "播放":
+                        return True
+                    elif ele_obj.text == "暂停":
+                        result = self._verify_and_click_element(self.play_or_pause_music_button)
+                        if result:
+                            wait(1)
+                            ele_obj = self.driver.appium_driver.find_element_by_xpath(self.play_or_pause_music_button)
+                            if ele_obj.text == "播放":
+                                logger.info('Succeed to pause music')
+                                wait(3)
+                                return True
+                        else:
+                            logger.info('Fail to pause music, try again')
+                            wait(1)
+                    else:
+                        wait(1)
+                except Exception as e:
                     wait(1)
             else:
-                logger.info('Music has been paused')
-                return True
-        else:
-            return False
+                return False
 
     def no_reminder_for_music_interruption(self, wait_time=3):
         logger.info('Click no reminder button')

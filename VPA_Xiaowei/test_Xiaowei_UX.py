@@ -799,10 +799,13 @@ def test_VPA_Status_After_Factory_Default_01(automation_xiaowei_ux):
     phone.launch_application(PhoneAppType.BLUETOOTH)
     for device in phone.bluetooth.bt_get_pairlist():
         phone.bluetooth.bt_unpair(device)
+
     dut.bluetooth.set_discoverable()
+    wait(1)
     phone.bluetooth.bt_radio(enable='off')
     phone.bluetooth.bt_radio(enable='on')
-    assert phone.bluetooth.bt_connect(current_name), "Failed to reconnect dut via bluetooth"
+    wait(1)
+    assert phone.bluetooth.bt_connect(current_name), "Failed to connect to dut via bluetooth"
     # phone.bluetooth.close_app() this step may cause launch next app failed
     test_step(6, "Switch to xiaowei APP", dut)
     assert phone.launch_application(PhoneAppType.XIAOWEI), "Failed to switch to Xiaowei"
@@ -878,7 +881,7 @@ def test_Xiaowei_While_HP_Is_In_Discoverable_State_01(automation_xiaowei_ux):
 
 @ScriptCommon()
 @TestFilters(scope=1, phones=[[PhoneType.ANY]])
-def test_Cancel_VPA_Query_Response_With_double_tap_captouch_01(automation_xiaowei_ux):
+def test_Cancel_VPA_Query_Response_With_Double_Tap_Captouch_01(automation_xiaowei_ux):
     dut = automation_xiaowei_ux[0]
     phone = automation_xiaowei_ux[1]
     query_response_dict = XiaoweiSupport.xw_query_response_dict()
