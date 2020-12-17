@@ -24,6 +24,7 @@ import pytest
 import os
 import random
 import datetime
+from retrying import retry
 from wham_automation.lib.framework.Configs.ProductInfo import ProductFeature, Buttons
 from wham_automation.lib.mobile.scenario.PhoneObject import PhoneType
 from wham_automation.script_support.AssertHelpers import SinkStates
@@ -66,6 +67,7 @@ def test_Xiaowei_NC_Support_01(automation_xiaowei_nc_eq):
     test_results.append("*" * 150)
     test_results.append("%-30s%-30s%-30s%-30s%-30s" % ("query_nc_text", "query_text_in_xw", "source_nc_level/state", "current_nc_level/state", "test_result"))
 
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
     def handle_xiaowei_nc(xiaowei_nc_support, test_results):
         assert xiaowei_nc_support.perform_nc_query(), "xiaowei recording or streaming failed"
         test_result = xiaowei_nc_support.check_result()
@@ -87,8 +89,8 @@ def test_Xiaowei_NC_Support_01(automation_xiaowei_nc_eq):
     test_results.append("Increase NC level".center(150, "*"))
     increase_nc_level = Xiaowei_NC_EQ_Support.increase_nc_level
     for query_text in increase_nc_level:
-        source_nc_level = random.randint(1, 10)
-        target_nc_level = source_nc_level - 1
+        source_nc_level = random.randint(0, 9)
+        target_nc_level = source_nc_level + 1
         xiaowei_nc_support = Xiaowei_NC_EQ_Support.Xiaowei_NC_Support(dut, phone, source_nc_level, target_nc_level, query_text, "nc_level")
         xiaowei_nc_support.adjust_nc_level()
         handle_xiaowei_nc(xiaowei_nc_support, test_results)
@@ -97,8 +99,8 @@ def test_Xiaowei_NC_Support_01(automation_xiaowei_nc_eq):
     test_results.append("Decrease NC level".center(150, "*"))
     decrease_nc_level = Xiaowei_NC_EQ_Support.decrease_nc_level
     for query_text in decrease_nc_level:
-        source_nc_level = random.randint(0, 9)
-        target_nc_level = source_nc_level + 1
+        source_nc_level = random.randint(1, 10)
+        target_nc_level = source_nc_level - 1
         xiaowei_nc_support = Xiaowei_NC_EQ_Support.Xiaowei_NC_Support(dut, phone, source_nc_level, target_nc_level, query_text, "nc_level")
         xiaowei_nc_support.adjust_nc_level()
         handle_xiaowei_nc(xiaowei_nc_support, test_results)
@@ -106,10 +108,11 @@ def test_Xiaowei_NC_Support_01(automation_xiaowei_nc_eq):
     test_step(4, "Test xiaowei to set nc to specific level", dut)
     test_results.append("Set NC to specific level".center(150, "*"))
     set_nc_to_specific_level = Xiaowei_NC_EQ_Support.set_nc_to_specific_level
-    for query_list in set_nc_to_specific_level:
-        source_nc_level = random.randint(0, 10)
-        query_text = query_list[0]
-        target_nc_level = 10 - query_list[1]
+    all_levels_list = [i for i in range(0, 11)]
+    for query_text in set_nc_to_specific_level:
+        source_nc_level = random.choice(all_levels_list)
+        target_nc_level = random.choice(list(set(all_levels_list).difference({source_nc_level})))
+        query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_nc_level])
         xiaowei_nc_support = Xiaowei_NC_EQ_Support.Xiaowei_NC_Support(dut, phone, source_nc_level, target_nc_level, query_text, "nc_level")
         xiaowei_nc_support.adjust_nc_level()
         handle_xiaowei_nc(xiaowei_nc_support, test_results)
@@ -119,17 +122,17 @@ def test_Xiaowei_NC_Support_01(automation_xiaowei_nc_eq):
     set_nc_level_to_max = Xiaowei_NC_EQ_Support.set_nc_level_to_max
     for query_text in set_nc_level_to_max:
         source_nc_level = random.randint(0, 9)
-        target_nc_level = 0
+        target_nc_level = 10
         xiaowei_nc_support = Xiaowei_NC_EQ_Support.Xiaowei_NC_Support(dut, phone, source_nc_level, target_nc_level, query_text, "nc_level")
         xiaowei_nc_support.adjust_nc_level()
         handle_xiaowei_nc(xiaowei_nc_support, test_results)
 
     test_step(6, "Test xiaowei to set nc level to min", dut)
     test_results.append("Set NC level to min".center(150, "*"))
-    set_nc_level_to_max = Xiaowei_NC_EQ_Support.set_nc_level_to_min
-    for query_text in set_nc_level_to_max:
+    set_nc_level_to_min = Xiaowei_NC_EQ_Support.set_nc_level_to_min
+    for query_text in set_nc_level_to_min:
         source_nc_level = random.randint(1, 10)
-        target_nc_level = 10
+        target_nc_level = 0
         xiaowei_nc_support = Xiaowei_NC_EQ_Support.Xiaowei_NC_Support(dut, phone, source_nc_level, target_nc_level, query_text, "nc_level")
         xiaowei_nc_support.adjust_nc_level()
         handle_xiaowei_nc(xiaowei_nc_support, test_results)
@@ -162,6 +165,46 @@ def test_Xiaowei_NC_Support_01(automation_xiaowei_nc_eq):
             for each_item in test_result:
                 print(str(each_item).ljust(30 - len(str(each_item))), end="")
             print()
+
+@ScriptCommon()
+@TestFilters(scope=1, phones=[[PhoneType.ANY]])
+def test_Xiaowei_Set_All_NC_Levels_01(automation_xiaowei_nc_eq):
+    dut = automation_xiaowei_nc_eq[0]
+    phone = automation_xiaowei_nc_eq[1]
+    test_results = list()
+    test_results.append("*" * 150)
+    test_results.append("Test logs".center(150, "*"))
+    test_results.append("*" * 150)
+    test_results.append("%-30s%-30s%-30s%-30s%-30s" % ("query_nc_text", "query_text_in_xw", "source_nc_level/state", "current_nc_level/state", "test_result"))
+
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
+    def handle_xiaowei_nc(xiaowei_nc_support, test_results):
+        assert xiaowei_nc_support.perform_nc_query(), "xiaowei recording or streaming failed"
+        test_result = xiaowei_nc_support.check_result()
+        test_results.append(test_result)
+        assert phone.xiaowei.close_app(), "Failed to close xiaowei"
+        assert phone.xiaowei.launch_app(), "Failed to re-open xiaowei"
+
+    test_step(1, "Test xiaowei to set all nc levels", dut)
+    test_results.append("Set all nc levels".center(150, "-"))
+    set_nc_to_specific_level = Xiaowei_NC_EQ_Support.set_nc_to_specific_level
+    all_levels_list = [i for i in range(0, 11)]
+    for query_text in set_nc_to_specific_level:
+        for level in all_levels_list:
+            target_nc_level = level
+            source_nc_level = random.choice(list(set(all_levels_list).difference({level})))
+            real_query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_nc_level])
+            xiaowei_nc_support = Xiaowei_NC_EQ_Support.Xiaowei_NC_Support(dut, phone, source_nc_level, target_nc_level, real_query_text, "nc_level")
+            xiaowei_nc_support.adjust_nc_level()
+            handle_xiaowei_nc(xiaowei_nc_support, test_results)
+
+    for test_result in test_results:
+        if isinstance(test_result, str):
+            print(test_result)
+        if isinstance(test_result, list):
+            for each_item in test_result:
+                print(str(each_item).ljust(30 - len(str(each_item))), end="")
+            print()
             
 @ScriptCommon()
 @TestFilters(scope=1, phones=[[PhoneType.ANY]])
@@ -175,6 +218,7 @@ def test_Xiaowei_EQ_Support_01(automation_xiaowei_nc_eq):
     test_results.append("*" * 150)
     test_results.append("%-30s%-30s%-30s%-30s%-30s" % ("query_eq_text", "query_text_in_xw", "source_eq_level", "current_eq_level", "test_result"))
 
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
     def handle_xiaowei_eq(xiaowei_eq, test_results):
         assert xiaowei_eq.perform_eq_query(), "xiaowei recording or streaming failed"
         test_result = xiaowei_eq.check_result()
@@ -335,10 +379,11 @@ def test_Xiaowei_EQ_Support_01(automation_xiaowei_nc_eq):
     test_step(16, "Test xiaowei to set treble to specific level", dut)
     test_results.append("Set treble to specific level".center(150, "-"))
     set_treble_to_specific_level = Xiaowei_NC_EQ_Support.set_treble_to_specific_level
-    for query_list in set_treble_to_specific_level:
-        source_eq_level = random.randint(-10, 10)
-        query_text = query_list[0]
-        target_eq_level = query_list[1]
+    all_levels_list = [i for i in range(-10, 11)]
+    for query_text in set_treble_to_specific_level:
+        source_eq_level = random.choice(all_levels_list)
+        target_eq_level = random.choice(list(set(all_levels_list).difference({source_eq_level})))
+        query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_eq_level])
         xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, query_text, "treble")
         xiaowei_eq_support.adjust_eq_level()
         handle_xiaowei_eq(xiaowei_eq_support, test_results)
@@ -346,10 +391,11 @@ def test_Xiaowei_EQ_Support_01(automation_xiaowei_nc_eq):
     test_step(17, "Test xiaowei to set mid to specific level", dut)
     test_results.append("Set mid to specific level".center(150, "-"))
     set_mid_to_specific_level = Xiaowei_NC_EQ_Support.set_mid_to_specific_level
-    for query_list in set_mid_to_specific_level:
-        source_eq_level = random.randint(-10, 10)
-        query_text = query_list[0]
-        target_eq_level = query_list[1]
+    all_levels_list = [i for i in range(-10, 11)]
+    for query_text in set_mid_to_specific_level:
+        source_eq_level = random.choice(all_levels_list)
+        target_eq_level = random.choice(list(set(all_levels_list).difference({source_eq_level})))
+        query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_eq_level])
         xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, query_text, "mid")
         xiaowei_eq_support.adjust_eq_level()
         handle_xiaowei_eq(xiaowei_eq_support, test_results)
@@ -357,10 +403,11 @@ def test_Xiaowei_EQ_Support_01(automation_xiaowei_nc_eq):
     test_step(18, "Test xiaowei to set bass to specific level", dut)
     test_results.append("Set bass to specific level".center(150, "-"))
     set_bass_to_specific_level = Xiaowei_NC_EQ_Support.set_bass_to_specific_level
-    for query_list in set_bass_to_specific_level:
-        source_eq_level = random.randint(-10, 10)
-        query_text = query_list[0]
-        target_eq_level = query_list[1]
+    all_levels_list = [i for i in range(-10, 11)]
+    for query_text in set_bass_to_specific_level:
+        source_eq_level = random.choice(all_levels_list)
+        target_eq_level = random.choice(list(set(all_levels_list).difference({source_eq_level})))
+        query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_eq_level])
         xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, query_text, "bass")
         xiaowei_eq_support.adjust_eq_level()
         handle_xiaowei_eq(xiaowei_eq_support, test_results)
@@ -368,11 +415,13 @@ def test_Xiaowei_EQ_Support_01(automation_xiaowei_nc_eq):
     test_step(19, "Test xiaowei to set multiple eqs to specific level", dut)
     test_results.append("Set multiple eqs to specific level".center(150, "-"))
     set_multiple_eqs_to_specific_level = Xiaowei_NC_EQ_Support.set_multiple_eqs_to_specific_level
+    all_levels_list = [i for i in range(-10, 11)]
     for query_list in set_multiple_eqs_to_specific_level:
-        source_eq_level = random.randint(-10, 10)
+        source_eq_level = random.choice(all_levels_list)
+        target_eq_level = random.choice(list(set(all_levels_list).difference({source_eq_level})))
         query_text = query_list[0]
-        target_eq_level = query_list[1]
-        xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, query_text, *query_list[2])
+        query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_eq_level])
+        xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, query_text, *query_list[1])
         xiaowei_eq_support.adjust_eq_level()
         handle_xiaowei_eq(xiaowei_eq_support, test_results)
 
@@ -385,7 +434,71 @@ def test_Xiaowei_EQ_Support_01(automation_xiaowei_nc_eq):
                 print(str(each_item).ljust(30 - len(str(each_item))), end="")
             print()
 
+@ScriptCommon()
+@TestFilters(scope=1, phones=[[PhoneType.ANY]])
+def test_Xiaowei_Set_All_EQ_Levels_01(automation_xiaowei_nc_eq):
+    dut = automation_xiaowei_nc_eq[0]
+    phone = automation_xiaowei_nc_eq[1]
+    test_results = list()
+    test_results.append("*" * 150)
+    test_results.append("Test logs".center(150, "*"))
+    test_results.append("*" * 150)
+    test_results.append("%-30s%-30s%-30s%-30s%-30s" % ("query_eq_text", "query_text_in_xw", "source_eq_level", "current_eq_level", "test_result"))
 
+    @retry(stop_max_attempt_number=3, wait_fixed=2000)
+    def handle_xiaowei_eq(xiaowei_eq, test_results):
+        assert xiaowei_eq.perform_eq_query(), "xiaowei recording or streaming failed"
+        test_result = xiaowei_eq.check_result()
+        test_results.append(test_result)
+        assert phone.xiaowei.close_app(), "Failed to close xiaowei"
+        assert phone.xiaowei.launch_app(), "Failed to re-open Xiaowei"
+
+    test_step(1, "Test xiaowei to set all treble levels", dut)
+    test_results.append("Set all treble levels".center(150, "-"))
+    set_treble_to_specific_level = Xiaowei_NC_EQ_Support.set_treble_to_specific_level
+    all_levels_list = [i for i in range(-10, 11)]
+    for query_text in set_treble_to_specific_level:
+        for level in all_levels_list:
+            target_eq_level = level
+            source_eq_level = random.choice(list(set(all_levels_list).difference({level})))
+            real_query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_eq_level])
+            xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, real_query_text, "treble")
+            xiaowei_eq_support.adjust_eq_level()
+            handle_xiaowei_eq(xiaowei_eq_support, test_results)
+
+    test_step(2, "Test xiaowei to set all mid levels", dut)
+    test_results.append("Set all mid levels".center(150, "-"))
+    set_mid_to_specific_level = Xiaowei_NC_EQ_Support.set_mid_to_specific_level
+    all_levels_list = [i for i in range(-10, 11)]
+    for query_text in set_mid_to_specific_level:
+        for level in all_levels_list:
+            target_eq_level = level
+            source_eq_level = random.choice(list(set(all_levels_list).difference({level})))
+            real_query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_eq_level])
+            xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, real_query_text, "mid")
+            xiaowei_eq_support.adjust_eq_level()
+            handle_xiaowei_eq(xiaowei_eq_support, test_results)
+
+    test_step(3, "Test xiaowei to set all bass levels", dut)
+    test_results.append("Set all bass levels".center(150, "-"))
+    set_bass_to_specific_level = Xiaowei_NC_EQ_Support.set_bass_to_specific_level
+    all_levels_list = [i for i in range(-10, 11)]
+    for query_text in set_bass_to_specific_level:
+        for level in all_levels_list:
+            target_eq_level = level
+            source_eq_level = random.choice(list(set(all_levels_list).difference({level})))
+            real_query_text = query_text.replace("#", Xiaowei_NC_EQ_Support.Matching_Table_of_Numbers_and_Chinese_Characters[target_eq_level])
+            xiaowei_eq_support = Xiaowei_NC_EQ_Support.Xiaowei_EQ_Support(dut, phone, source_eq_level, target_eq_level, real_query_text, "bass")
+            xiaowei_eq_support.adjust_eq_level()
+            handle_xiaowei_eq(xiaowei_eq_support, test_results)
+
+    for test_result in test_results:
+        if isinstance(test_result, str):
+            print(test_result)
+        if isinstance(test_result, list):
+            for each_item in test_result:
+                print(str(each_item).ljust(30 - len(str(each_item))), end="")
+            print()
 
 
 
